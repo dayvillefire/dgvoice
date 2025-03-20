@@ -1,6 +1,6 @@
 dgVoice
 ====
-[![GoDoc](https://godoc.org/github.com/dayvillefire/dgvoice?status.svg)](https://godoc.org/github.com/dayvillefire/dgvoice) [![Go report](http://goreportcard.com/badge/dayvillefire/dgvoice)](http://goreportcard.com/report/dayvillefire/dgvoice) [![Build Status](https://travis-ci.org/dayvillefire/dgvoice.svg?branch=master)](https://travis-ci.org/dayvillefire/dgvoice) [![Discord Gophers](https://img.shields.io/badge/Discord%20Gophers-%23info-blue.svg)](https://discord.gg/0f1SbxBZjYq9jLBk)
+[![GoDoc](https://godoc.org/github.com/dayvillefire/dgvoice?status.svg)](https://godoc.org/github.com/dayvillefire/dgvoice) [![Go report](http://goreportcard.com/badge/github.com/dayvillefire/dgvoice)](http://goreportcard.com/report/github.com/dayvillefire/dgvoice) [![Build Status](https://travis-ci.org/dayvillefire/dgvoice.svg?branch=master)](https://travis-ci.org/dayvillefire/dgvoice) [![Discord Gophers](https://img.shields.io/badge/Discord%20Gophers-%23info-blue.svg)](https://discord.gg/0f1SbxBZjYq9jLBk)
 
 dgVoice is a [Go](https://golang.org/) package that provides an example of 
 adding opus audio and play file support for [DiscordGo](https://github.com/bwmarrin/discordgo).
