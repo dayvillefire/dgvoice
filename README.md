@@ -8,6 +8,8 @@ adding opus audio and play file support for [DiscordGo](https://github.com/bwmar
 * You must use the current develop branch of Discordgo
 * You must have ffmpeg in your path and Opus libs already installed.
 
+**This fork also has the ability to decode MP3s internally.**
+
 This code should be considered just a proof of concept, or an example, of 
 accomplishing this task and not a defacto standard. 
 
@@ -31,3 +33,4 @@ go get github.com/dayvillefire/dgvoice
 
 # Usage Example
 See example folder
+

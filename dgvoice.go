@@ -13,12 +13,15 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/dayvillefire/dgvoice/mpg123"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"layeh.com/gopus"
 )
 
@@ -46,15 +49,17 @@ var OnError = func(str string, err error) {
 	prefix := "dgVoice: " + str
 
 	if err != nil {
-		os.Stderr.WriteString(prefix + ": " + err.Error())
+		os.Stderr.WriteString(prefix + ": " + err.Error() + "\n")
 	} else {
-		os.Stderr.WriteString(prefix)
+		os.Stderr.WriteString(prefix + "\n")
 	}
 }
 
 // SendPCM will receive on the provied channel encode
 // received PCM data into Opus then send that to Discordgo
 func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
+	defer log.Printf("SendPCM finished for %s", v.ChannelID)
+
 	if pcm == nil {
 		return
 	}
@@ -140,7 +145,78 @@ func ReceivePCM(v *discordgo.VoiceConnection, c chan *discordgo.Packet) {
 // PlayAudioFile will play the given filename to the already connected
 // Discord voice server/channel.  voice websocket and udp socket
 // must already be setup before this will work.
-func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bool) {
+func PlayAudioFileInternal(v *discordgo.VoiceConnection, filename string, stop chan bool) {
+	defer log.Printf("PlayAudioFileInternal finished for %s", filename)
+	defer func() {
+		stop <- true
+	}()
+
+	inFile, err := os.Open(filename)
+	if err != nil {
+		log.Printf("ERR: %s", err)
+		return
+	}
+	defer inFile.Close()
+
+	buffer, err := mp3.DecodeWithSampleRate(frameRate, inFile)
+	if err != nil {
+		log.Printf("ERR: %s", err)
+		return
+	}
+
+	// Send "speaking" packet over the voice websocket
+	err = v.Speaking(true)
+	if err != nil {
+		OnError("Couldn't set speaking", err)
+	}
+
+	// Send not "speaking" packet over the websocket when we finish
+	defer func() {
+		err := v.Speaking(false)
+		if err != nil {
+			OnError("Couldn't stop speaking", err)
+		}
+	}()
+
+	send := make(chan []int16, 2)
+	defer close(send)
+
+	close := make(chan bool)
+	go func() {
+		SendPCM(v, send)
+		close <- true
+	}()
+
+	for {
+		// read data from ffmpeg stdout
+		audiobuf := make([]int16, frameSize*channels)
+		err = binary.Read(buffer, binary.LittleEndian, &audiobuf)
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return
+		}
+		if err != nil && err != mpg123.EOF {
+			OnError("error reading from decoder", err)
+			return
+		}
+
+		// Send received PCM to the sendPCM channel
+		select {
+		case send <- audiobuf:
+		case <-close:
+			log.Printf("close received, stopping playback")
+			return
+		}
+	}
+}
+
+// PlayAudioFile will play the given filename to the already connected
+// Discord voice server/channel.  voice websocket and udp socket
+// must already be setup before this will work.
+func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool) {
+	defer log.Printf("PlayAudioFile finished for %s", filename)
+	defer func() {
+		stop <- true
+	}()
 
 	// Create a shell command "object" to run.
 	run := exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar", strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
@@ -156,11 +232,21 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 	err = run.Start()
 	if err != nil {
 		OnError("RunStart Error", err)
+		ffmpegout.Close()
 		return
 	}
 
 	// prevent memory leak from residual ffmpeg streams
-	defer run.Process.Kill()
+	defer func() {
+		log.Printf("Waiting for ffmpeg to finish")
+		err = run.Wait()
+		if err != nil {
+			OnError("RunWait Error", err)
+		}
+		log.Printf("ffmpeg finished")
+		run.Process.Kill()
+		ffmpegout.Close()
+	}()
 
 	// Stop goroutine when audio is done playing
 	done := make(chan struct{})
@@ -170,8 +256,16 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 	go func() {
 		select {
 		case <-stop:
+			log.Printf("stop received, killing ffmpeg")
 			err = run.Process.Kill()
+			ffmpegout.Close()
 		case <-done:
+			log.Printf("done received, killing ffmpeg")
+			err = run.Process.Kill()
+			if err != nil {
+				OnError("Couldn't kill ffmpeg process", err)
+			}
+			ffmpegout.Close()
 		}
 	}()
 
@@ -214,6 +308,9 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop <-chan bo
 		select {
 		case send <- audiobuf:
 		case <-close:
+			log.Printf("close received, stopping playback")
+			err = run.Process.Kill()
+			ffmpegout.Close()
 			return
 		}
 	}

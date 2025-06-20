@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/bwmarrin/dgvoice"
 	"github.com/bwmarrin/discordgo"
@@ -12,8 +12,7 @@ import (
 func main() {
 	// NOTE: All of the below fields are required for this example to work correctly.
 	var (
-		Email     = flag.String("e", "", "Discord account email.")
-		Password  = flag.String("p", "", "Discord account password.")
+		Token     = flag.String("t", "", "Token or email address of Discord account.")
 		GuildID   = flag.String("g", "", "Guild ID")
 		ChannelID = flag.String("c", "", "Channel ID")
 		Folder    = flag.String("f", "", "Folder of files to play.")
@@ -22,7 +21,7 @@ func main() {
 	flag.Parse()
 
 	// Connect to Discord
-	discord, err := discordgo.New(*Email, *Password)
+	discord, err := discordgo.New(*Token)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -45,7 +44,7 @@ func main() {
 
 	// Start loop and attempt to play all files in the given folder
 	fmt.Println("Reading Folder: ", *Folder)
-	files, _ := ioutil.ReadDir(*Folder)
+	files, _ := os.ReadDir(*Folder)
 	for _, f := range files {
 		fmt.Println("PlayAudioFile:", f.Name())
 		discord.UpdateStatus(0, f.Name())
