@@ -10,13 +10,13 @@ require (
 	github.com/Carmen-Shannon/gopus v1.0.0
 	github.com/bwmarrin/dgvoice v0.0.0-20210225172318-caaac756e02e
 	github.com/bwmarrin/discordgo v0.29.0
-	github.com/dayvillefire/dgvoice/mpg123 v0.0.0-20250904121917-21df3be04847
-	github.com/hajimehoshi/ebiten/v2 v2.9.3
+	github.com/dayvillefire/dgvoice/mpg123 v0.0.0-20251029165024-7be4b2481c13
+	github.com/hajimehoshi/ebiten/v2 v2.9.4
 )
 
 require (
 	github.com/ebitengine/oto/v3 v3.4.0 // indirect
-	github.com/ebitengine/purego v0.9.0 // indirect
+	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
